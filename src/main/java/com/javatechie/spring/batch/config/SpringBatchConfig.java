@@ -73,7 +73,7 @@ public class SpringBatchConfig {
 
     @Bean
     public Step step1() {
-        return stepBuilderFactory.get("csv-step").<Customer, Customer>chunk(1000000)
+        return stepBuilderFactory.get("csv-step").<Customer, Customer>chunk(10)
             .reader(reader())
             .processor(processor())
             .writer(writer())
@@ -91,7 +91,7 @@ public class SpringBatchConfig {
     @Bean
     public TaskExecutor taskExecutor() {
         SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
-        asyncTaskExecutor.setConcurrencyLimit(1);
+        asyncTaskExecutor.setConcurrencyLimit(10);
         return asyncTaskExecutor;
     }
 

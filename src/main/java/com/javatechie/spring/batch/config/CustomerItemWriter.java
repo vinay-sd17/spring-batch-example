@@ -22,6 +22,8 @@ public class CustomerItemWriter implements ItemWriter<Customer>, Closeable {
 
     HashMap<String, List<Customer>> customerHashMap = new HashMap<>();
 
+    private List<Customer> customerList = new ArrayList<>();
+
     public CustomerItemWriter() {
         Resource outputResource = new FileSystemResource(
             "/Users/desika.srinivasan/Projects/spring-batch-example/src/main/resources/outputData.csv");
@@ -41,22 +43,26 @@ public class CustomerItemWriter implements ItemWriter<Customer>, Closeable {
 
     @Override
     public void write(final List<? extends Customer> items) throws Exception {
-        System.out.println("size= " + items.size());
-        for (Customer item : items) {
-            String key = item.getOfferId() + ":" + item.getSegmentId();
-            if (customerHashMap.containsKey(key)) {
-                customerHashMap.get(key).add(item);
-            } else {
-                List<Customer> customerList = new ArrayList<>();
-                customerList.add(item);
-                customerHashMap.put(key, customerList);
-            }
-        }
+        System.out.println(items.size());
+        customerList.addAll(items);
     }
 
     @PreDestroy
     @Override
+    // todo Perform all your action here
     public void close() throws IOException {
+        System.out.println(customerList.size());
+        for (Customer customer : customerList) {
+            String key = customer.getOfferId() + ":" + customer.getSegmentId();
+            if (customerHashMap.containsKey(key)) {
+                customerHashMap.get(key).add(customer);
+            } else {
+                List<Customer> customerList = new ArrayList<>();
+                customerList.add(customer);
+                customerHashMap.put(key, customerList);
+            }
+        }
+
         writer.close();
     }
 }
