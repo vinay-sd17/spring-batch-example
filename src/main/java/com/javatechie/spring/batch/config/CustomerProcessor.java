@@ -6,6 +6,7 @@ import com.javatechie.spring.batch.entity.OfferSegmentPermutations;
 import com.javatechie.spring.batch.entity.RuleDetails;
 import org.springframework.batch.core.annotation.AfterStep;
 import org.springframework.batch.core.annotation.BeforeStep;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -20,21 +21,12 @@ public class CustomerProcessor implements ItemProcessor<Customer, Customer> {
 
     RuleDetails ruleDetails;
 
-    List<OfferSegmentPermutations> offerSegmentPermutations = new ArrayList<>();
-
-    HashMap<String, List<Customer>> permutationCountMap = new HashMap<>();
+    HashMap<String, OfferSegmentPermutations> permutationsMap = new HashMap<>();
 
     @BeforeStep
     private void beforeStep() {
         ruleDetails = ruleDetailsFeignClient.getRule();
         generatePermutations();
-        System.out.println(offerSegmentPermutations);
-    }
-
-    @AfterStep
-    private void afterStep() {
-        System.out.println("after step");
-        System.out.println(permutationCountMap);
     }
 
     private void generatePermutations() {
@@ -43,23 +35,18 @@ public class CustomerProcessor implements ItemProcessor<Customer, Customer> {
                 OfferSegmentPermutations offerSegmentPermutation = new OfferSegmentPermutations();
                 offerSegmentPermutation.setOfferId(offerId);
                 offerSegmentPermutation.setSegmentId(segmentId);
-                offerSegmentPermutations.add(offerSegmentPermutation);
+                permutationsMap.put(offerId + ":" + segmentId, offerSegmentPermutation);
             });
         });
     }
 
     @Override
     public Customer process(Customer customer) throws Exception {
-        String key = customer.getOfferId() + ":" + customer.getSegmentId();
-        permutationCountMap.computeIfAbsent(key, k -> new ArrayList<>());
-        //Fixed
-        if (ruleDetails.getSamplingType().equals("Fixed")) {
-            if (permutationCountMap.get(key).size() < ruleDetails.getSamplingQty()) {
-                permutationCountMap.get(key).add(customer);
-                return customer;
-            }
+        if (permutationsMap.containsKey(customer.getOfferId() + ":" + customer.getSegmentId())) {
+            customer.setSamplingType(ruleDetails.getSamplingType());
+            customer.setSamplingQty(ruleDetails.getSamplingQty());
+            return customer;
         }
-        //todo Percentage
         return null;
     }
 }

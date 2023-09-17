@@ -2,6 +2,7 @@ package com.javatechie.spring.batch.config;
 
 import com.javatechie.spring.batch.entity.Customer;
 import com.javatechie.spring.batch.repository.CustomerRepository;
+import lombok.AllArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.annotation.BeforeWrite;
@@ -9,6 +10,8 @@ import org.springframework.batch.core.configuration.annotation.EnableBatchProces
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.LineMapper;
@@ -38,9 +41,6 @@ public class SpringBatchConfig {
     @Autowired
     private CustomerRepository customerRepository;
 
-    //todo update the path here
-    private Resource outputResource = new FileSystemResource(
-        "/Users/desika.srinivasan/Projects/spring-batch-example/src/main/resources/outputData.csv");
 
     @Bean
     public FlatFileItemReader<Customer> reader() {
@@ -71,40 +71,9 @@ public class SpringBatchConfig {
         return new CustomerProcessor();
     }
 
-    @BeforeWrite
-    public void beforeWrite() {
-        System.out.println("before write");
-    }
-
-    @Bean
-    public FlatFileItemWriter<Customer> writer() {
-        FlatFileItemWriter<Customer> writer = new FlatFileItemWriter<>();
-        writer.setResource(outputResource);
-        writer.setAppendAllowed(true);
-        writer.setLineAggregator(new DelimitedLineAggregator<Customer>() {
-            {
-                setDelimiter(",");
-                setFieldExtractor(new BeanWrapperFieldExtractor<Customer>() {
-                    {
-                        setNames(new String[]{"uuid", "offerId", "segmentId", "transSubGrpId", "currency"});
-                    }
-                });
-            }
-        });
-        return writer;
-    }
-
-//    @Bean
-//    public RepositoryItemWriter<Customer> writer() {
-//        RepositoryItemWriter<Customer> writer = new RepositoryItemWriter<>();
-//        writer.setRepository(customerRepository);
-//        writer.setMethodName("save");
-//        return writer;
-//    }
-
     @Bean
     public Step step1() {
-        return stepBuilderFactory.get("csv-step").<Customer, Customer>chunk(10)
+        return stepBuilderFactory.get("csv-step").<Customer, Customer>chunk(1000000)
             .reader(reader())
             .processor(processor())
             .writer(writer())
@@ -122,8 +91,14 @@ public class SpringBatchConfig {
     @Bean
     public TaskExecutor taskExecutor() {
         SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
-        asyncTaskExecutor.setConcurrencyLimit(10);
+        asyncTaskExecutor.setConcurrencyLimit(1);
         return asyncTaskExecutor;
+    }
+
+    @StepScope
+    @Bean
+    public ItemWriter<Customer> writer() {
+        return new CustomerItemWriter();
     }
 
 }

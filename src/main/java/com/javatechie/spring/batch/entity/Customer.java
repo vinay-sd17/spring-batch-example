@@ -34,4 +34,8 @@ public class Customer {
     @Column
     private String currency;
 
+    private String samplingType;
+
+    private int samplingQty;
+
 }
